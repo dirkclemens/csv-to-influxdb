@@ -1,6 +1,6 @@
 #
 #
-#   python sql-to-influxdb.py -i PIKO42_DAILY --dbname piko42 -m solar
+#   python sql-to-influxdb.py -i PIKO42_DAILY --dbname piko42 -m solar -fd "2019-11-01"
 #
 #
 import requests
@@ -50,9 +50,19 @@ def isinteger(value):
         except:
             return False
 
+import datetime
+def validate(date_text):
+    try:
+        datetime.datetime.strptime(date_text, '%Y-%m-%d')
+        return date_text
+    except ValueError:
+        print("Incorrect data format, should be YYYY-MM-DD")
+        pass
+        return datetime.date.today().strftime("%Y-%m-%d")
+
 
 def doSql(inputtable, servername, user, password, dbname, metric,
-    timecolumn, timeformat, tagcolumns, fieldcolumns, usegzip,
+    timecolumn, timeformat, fromdate, tagcolumns, fieldcolumns, usegzip,
     delimiter, batchsize, create, datatimezone):
 
     host = servername[0:servername.rfind(':')]
@@ -82,8 +92,10 @@ def doSql(inputtable, servername, user, password, dbname, metric,
     with con:
     
         cur = con.cursor()
+        fromdate = validate(fromdate)
+        sql = "SELECT * FROM PIKO42_DAILY WHERE TIMESTAMP > '%s' ORDER BY TIMESTAMP" % (fromdate)
         #cur.execute("SELECT os.regdt, os.sid, o.oid,o.amount,o.pid FROM Orders o inner join orderstatus os")
-        cur.execute("SELECT * FROM PIKO42_DAILY WHERE TIMESTAMP > '2019-11-01' ORDER BY TIMESTAMP")
+        cur.execute(sql)
 #        cur.execute("SELECT * FROM " + inputtable + " ORDER BY TIMESTAMP")
         
         while True:
@@ -196,6 +208,9 @@ if __name__ == "__main__":
     parser.add_argument('-tf', '--timeformat', nargs='?', default='%Y-%m-%d %H:%M:%S',
                         help='Timestamp format. Default: \'%%Y-%%m-%%d %%H:%%M:%%S\' e.g.: 1970-01-01 00:00:00')
 
+    parser.add_argument('-fd', '--fromdate', nargs='?', #default='%Y-%m-%d',
+                        help='Import from x date to today. Default: \'%%Y-%%m-%%d\' e.g.: 2019-11-01')
+
     parser.add_argument('-tz', '--timezone', default='UTC',
                         help='Timezone of supplied data. Default: UTC')
 
@@ -213,7 +228,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     doSql(args.input, args.server, args.user, args.password, args.dbname,
-        args.metricname, args.timecolumn, args.timeformat, args.tagcolumns,
+        args.metricname, args.timecolumn, args.timeformat, args.fromdate, args.tagcolumns,
         args.fieldcolumns, args.gzip, args.delimiter, args.batchsize, args.create,
         args.timezone)
 
