@@ -1,6 +1,6 @@
 #
 #
-#   python sql-to-influxdb.py -i PIKO42_DAILY --dbname piko42 -m solar -fd "2019-11-01"
+#   python sql-to-influxdb.py -i PIKO42_DAILY --dbname piko42 -m solar -fd "2019-11-30"
 #
 #
 import requests
@@ -92,7 +92,10 @@ def doSql(inputtable, servername, user, password, dbname, metric,
     with con:
     
         cur = con.cursor()
-        fromdate = validate(fromdate)
+        if fromdate == None: 
+            fromdate = datetime.date.today().strftime("%Y-%m-%d")
+        else:
+            fromdate = validate(fromdate)
         sql = "SELECT * FROM PIKO42_DAILY WHERE TIMESTAMP > '%s' ORDER BY TIMESTAMP" % (fromdate)
         #cur.execute("SELECT os.regdt, os.sid, o.oid,o.amount,o.pid FROM Orders o inner join orderstatus os")
         cur.execute(sql)
